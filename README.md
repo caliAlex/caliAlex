@@ -4,8 +4,7 @@
 
 - 🌱 I’m currently earning a BS in Computer Science from California State University, Sacramento
 
-- 💞️ I’m looking to collaborate on any gaming projects. Please see my work throughout my GH profile. I also have a Motif-8 and can contribute
--       music and/or sound FX to any project
+- 💞️ I’m looking to collaborate on any gaming projects. Please see my work throughout my GH profile. I also have a Motif-8 and can contribute music and/or sound FX to any project
 
 - 📫 You can reach me at mericali916@gmail.com
 
