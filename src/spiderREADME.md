@@ -1,0 +1,4 @@
+- STEP 1: Download the whole "src" file
+- STEP 2: If you do not have an IDE that you'd like to use to compile and run, then simply open the "compile.dat" file
+- STEP 3: After compiling, open the "run.dat" file
+- STEP 4: Feel free to contact me with any suggestion/bug fixes. My only request is for you to be please be nice. 
