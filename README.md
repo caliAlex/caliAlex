@@ -1,3 +1,6 @@
+- TO RUN THIS PROGRAM, SIMPLY DOWNLOAD THE SRC FILE, OPEN THE 'compile.bat' FILE, THEN OPEN THE 'run.bat' FILE
+
+
 - 👋 Hi, my name is Alex (aka @caliAlex)
 
 - 👀 I’m interested in game designe, UI, media relations, and music. 
