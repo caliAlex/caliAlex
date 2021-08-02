@@ -1,5 +1,6 @@
 package a4;
 
+import java.awt.*;
 import java.awt.event.*;
 import java.nio.*;
 import java.lang.Math;
@@ -11,7 +12,8 @@ import com.jogamp.opengl.util.*;
 import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.GLContext;
 import org.joml.*;
-import java.awt.Color;
+
+import javax.swing.JFrame;
 
 
 public class Starter extends JFrame implements GLEventListener, KeyListener,
@@ -30,55 +32,55 @@ public class Starter extends JFrame implements GLEventListener, KeyListener,
     private final Vector3f up = new Vector3f(0.0f, 1.0f, 0.0f);
 
     /**** OBJ & Texture vars ****/
-        private ImportedModel myModel1, myModel2, myModel3, myModel4, myModel5, myModel6, spiderObj;
-        private int churchTexture, gridTexture, flTexture, shipTexture, bulldogTexture, spiderTexture;
-        private int bgTex;
+    private ImportedModel myModel1, myModel2, myModel3, myModel4, myModel5, myModel6, spiderObj;
+    private int churchTexture, gridTexture, flTexture, shipTexture, bulldogTexture, spiderTexture;
+    private int bgTex;
 
-        private int alphaLoc, flipLoc;
-        //OBJ translations, rotations, & scales
-        private final Vector3f mountainLoc = new Vector3f(0.0f, -14.0f, 0.0f);
-        private final Vector3f mountainScale = new Vector3f(15.0f, 15.0f, 15.0f);
+    private int alphaLoc, flipLoc;
+    //OBJ translations, rotations, & scales
+    private final Vector3f mountainLoc = new Vector3f(0.0f, -14.0f, 0.0f);
+    private final Vector3f mountainScale = new Vector3f(15.0f, 15.0f, 15.0f);
 
-        private final Vector3f churchLoc = new Vector3f(-26.0f, 45.5f, -10.0f);
-        private final float churchRotation = (float) Math.toRadians(90);
-        private final Vector3f churchScale = new Vector3f(2.7f, 2.7f, 2.7f);
+    private final Vector3f churchLoc = new Vector3f(-26.0f, 45.5f, -10.0f);
+    private final float churchRotation = (float) Math.toRadians(90);
+    private final Vector3f churchScale = new Vector3f(2.7f, 2.7f, 2.7f);
 
-        private final Vector3f lightOBJScale = new Vector3f(0.7f, 0.7f, 0.7f);
+    private final Vector3f lightOBJScale = new Vector3f(0.7f, 0.7f, 0.7f);
 
-        private final Vector3f gridLoc = new Vector3f(0.0f, -15.0f, 0.0f);
-        private final Vector3f gridScale = new Vector3f(400.0f, 400.0f, 400.0f);
+    private final Vector3f gridLoc = new Vector3f(0.0f, -15.0f, 0.0f);
+    private final Vector3f gridScale = new Vector3f(400.0f, 400.0f, 400.0f);
 
-        private final Vector3f shipScale = new Vector3f(10.0f, 10.0f, 10.0f);
-        private final Vector3f shipLocation = new Vector3f((float) Math.sin(tf) * 250.0f, 170.0f, (float) Math.cos(tf) * 250.0f);
+    private final Vector3f shipScale = new Vector3f(10.0f, 10.0f, 10.0f);
+    private final Vector3f shipLocation = new Vector3f((float) Math.sin(tf) * 250.0f, 170.0f, (float) Math.cos(tf) * 250.0f);
 
-        private final Vector3f spiderLoc = new Vector3f(-53.0f, 25.0f, 10.0f);
-        private final Vector3f spiderRotation = new Vector3f((float) Math.toRadians(30), (float) Math.toRadians(45), 0.0f);
-        private final Vector3f spiderScale = new Vector3f(1.0f, 1.0f, 1.0f);
+    private final Vector3f spiderLoc = new Vector3f(-53.0f, 25.0f, 10.0f);
+    private final Vector3f spiderRotation = new Vector3f((float) Math.toRadians(30), (float) Math.toRadians(45), 0.0f);
+    private final Vector3f spiderScale = new Vector3f(1.0f, 1.0f, 1.0f);
 
-        private final Vector3f bulldogLoc = new Vector3f(33.0f, 80.0f, -2.0f);
-        private final float bulldogRotation = (float) Math.toRadians(90);
-        private final Vector3f bulldogScale = new Vector3f(4.0f, 4.0f, 4.0f);
+    private final Vector3f bulldogLoc = new Vector3f(33.0f, 80.0f, -2.0f);
+    private final float bulldogRotation = (float) Math.toRadians(90);
+    private final Vector3f bulldogScale = new Vector3f(4.0f, 4.0f, 4.0f);
 
-        // Allocate variables for display() function
-        private final FloatBuffer vals = Buffers.newDirectFloatBuffer(16);
+    // Allocate variables for display() function
+    private final FloatBuffer vals = Buffers.newDirectFloatBuffer(16);
 
-        private Matrix4f pMat = new Matrix4f();     //Perspective Matrix
-        private Matrix4f vMat = new Matrix4f();     //View Matrix
-        private Matrix4f mMat = new Matrix4f();     //Model Matrix
-        private Matrix4f mvMat = new Matrix4f();    //Model-View Matrix
+    private Matrix4f pMat = new Matrix4f();     //Perspective Matrix
+    private Matrix4f vMat = new Matrix4f();     //View Matrix
+    private Matrix4f mMat = new Matrix4f();     //Model Matrix
+    private Matrix4f mvMat = new Matrix4f();    //Model-View Matrix
 
-        private int mvLoc, projLoc, nLoc, sLoc, vLoc, conditional;
+    private int mvLoc, projLoc, nLoc, sLoc, vLoc, conditional;
 
-        //Explosion Variables
-        private int explosionLoc, boomConditional, makeGoBoomLoc;
-        private int boomFactor=0;
+    //Explosion Variables
+    private int explosionLoc, boomConditional, makeGoBoomLoc;
+    private int boomFactor=0;
 
-        private float aspect, explosionTimeFactorShader;
+    private float aspect, explosionTimeFactorShader;
 
-        private final CurrentDragLocation mouseDrag = new CurrentDragLocation();
+    private final CurrentDragLocation mouseDrag = new CurrentDragLocation();
 
-        private int cubeMapTexture;
-        private final SkyBox skyBox = new SkyBox();
+    private int cubeMapTexture;
+    private final SkyBox skyBox = new SkyBox();
 
     /**** End OBJ & Texture vars ****/
 
@@ -91,35 +93,34 @@ public class Starter extends JFrame implements GLEventListener, KeyListener,
     private java.util.Random random = new java.util.Random();
     /**** Noise End ****/
 
-
     /**** Light Declaration ****/
-        private Matrix4f invTrMat = new Matrix4f(); // inverse-transpose
-        private Vector3f currentLightPos = new Vector3f(0.0f, 200.0f, 0.0f);
-        private Vector3f deltaLightPos = new Vector3f(currentLightPos);
-        private float[] lightPos = new float[3];
-        private boolean lightsOn = true;
+    private Matrix4f invTrMat = new Matrix4f(); // inverse-transpose
+    private Vector3f currentLightPos = new Vector3f(0.0f, 200.0f, 0.0f);
+    private Vector3f deltaLightPos = new Vector3f(currentLightPos);
+    private float[] lightPos = new float[3];
+    private boolean lightsOn = true;
 
-        Matrix4f b = new Matrix4f();
+    Matrix4f b = new Matrix4f();
 
-        // white light properties
-        float[] globalAmbient = new float[]{0.3f, 0.3f, 0.3f, 1.0f};
+    // white light properties
+    float[] globalAmbient = new float[]{0.3f, 0.3f, 0.3f, 1.0f};
 
-        float[] lightAmbient = new float[]{0.4f, 0.4f, 0.4f, 1.0f};
-        float[] lightDiffuse = new float[]{0.4f, 0.4f, 0.4f, 1.0f};
-        float[] lightSpecular = new float[]{0.8f, 0.8f, 0.8f, 1.0f};
+    float[] lightAmbient = new float[]{0.4f, 0.4f, 0.4f, 1.0f};
+    float[] lightDiffuse = new float[]{0.4f, 0.4f, 0.4f, 1.0f};
+    float[] lightSpecular = new float[]{0.8f, 0.8f, 0.8f, 1.0f};
 
     /**** End Light Declaration ****/
 
     /**** Material Declaration ****/
-        private float[] gMatAmb = Utils.goldAmbient();
-        private float[] gMatDif = Utils.goldDiffuse();
-        private float[] gMatSpec = Utils.goldSpecular();
-        private float gMatShi = Utils.goldShininess();
+    private float[] gMatAmb = Utils.goldAmbient();
+    private float[] gMatDif = Utils.goldDiffuse();
+    private float[] gMatSpec = Utils.goldSpecular();
+    private float gMatShi = Utils.goldShininess();
 
-        private float[] pMatAmb = Utils.personalAmbient();
-        private float[] pMatDif = Utils.personalDiffuse();
-        private float[] pMatSpec = Utils.personalSpecular();
-        private float pMatShi = Utils.personalShininess();
+    private float[] pMatAmb = Utils.personalAmbient();
+    private float[] pMatDif = Utils.personalDiffuse();
+    private float[] pMatSpec = Utils.personalSpecular();
+    private float pMatShi = Utils.personalShininess();
 
     private float[] pearlMatAmb = Utils.pearlAmbient();
     private float[] pearlMatDif = Utils.pearlDiffuse();
@@ -139,21 +140,26 @@ public class Starter extends JFrame implements GLEventListener, KeyListener,
     /**** End Material Declaration ****/
 
     /**** Shadow Declarations ****/
-        private int scSizeX, scSizeY;
-        private int[] shadowTex = new int[1];
-        private int[] shadowBuffer = new int[1];
-        private Matrix4f lightVmat = new Matrix4f();
-        private Matrix4f lightPmat = new Matrix4f();
-        private Matrix4f shadowMVP1 = new Matrix4f();
-        private Matrix4f shadowMVP2 = new Matrix4f();
+    private int scSizeX, scSizeY;
+    private int[] shadowTex = new int[1];
+    private int[] shadowBuffer = new int[1];
+    private Matrix4f lightVmat = new Matrix4f();
+    private Matrix4f lightPmat = new Matrix4f();
+    private Matrix4f shadowMVP1 = new Matrix4f();
+    private Matrix4f shadowMVP2 = new Matrix4f();
 
     /**** End Shadow Declarations ****/
+
+    /**** Menu Declarations ****/
+
+    /**** End Menu Declarations ****/
+
 
 //---------------------------------------------------------------------------------------------------------------------
 
     /**** Starter Begin ****/
     public Starter() {
-        setTitle("Assignment 4");
+        setTitle("Press 'M' for Menu");
         setSize(1100, 800);
         myCanvas = new GLCanvas();
         myCanvas.addGLEventListener(this);
@@ -167,6 +173,7 @@ public class Starter extends JFrame implements GLEventListener, KeyListener,
         animator.start();
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);   //End run upon closing screen
         myCanvas.setFocusable(true);
+        addMenu();                          //Method to add button menu upon startup
         myCanvas.requestFocus();
     }
     /***** STARTER END *****/
@@ -1328,7 +1335,29 @@ public class Starter extends JFrame implements GLEventListener, KeyListener,
         gl.glProgramUniform1f(renderingProgramPar, mshiLoc, matShi);
     }
 
+    /*************Panel Button Method**************/
+    //Method that adds a panel to the top-North side of the frame
+    public void addMenu() {
+        JFrame menuFrame = new JFrame();
+        JPanel menuPanel = new JPanel();
+        JLabel menuLabel = new JLabel();
 
+        menuLabel.setIcon(new ImageIcon("keyMenu.JPG"));    //Ensure image stored at correct (path) location
+        menuPanel.add(menuLabel);
+        add(menuPanel);
+        validate();
+
+        menuPanel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+        //menuPanel.setLayout(new GridLayout(1, 10));
+        //menuPanel.add(menuLabel);
+
+        menuFrame.add(menuPanel, BorderLayout.CENTER);
+        menuFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        menuFrame.setTitle("Key Menu");
+        menuFrame.setSize(500, 500);
+        menuFrame.pack();
+        menuFrame.setVisible(true);
+    }
     // 3D Texture section
 
     private void fillDataArray(byte data[])
@@ -1514,6 +1543,12 @@ public class Starter extends JFrame implements GLEventListener, KeyListener,
             if(boomFactor > 0)
                 boomFactor--;
             boomConditional = 0;
+        }
+
+        /** Display Key Menu **/
+        else if(key == KeyEvent.VK_M){
+            System.out.println("Show key Menu");
+            addMenu();
         }
     }
     @Override
