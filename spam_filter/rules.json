@@ -1,0 +1,46 @@
+{
+  "_comment": "Edit this file to tune the filter. Domains match the sender's domain and any parent domain. 'domain_contains' matches anywhere in the sender domain. Allowlisted senders/domains are never moved.",
+
+  "threshold": 6,
+
+  "blocklist_domains": [
+    "wiselivingspace.com",
+    "shortflowcapital.org",
+    "foodback-yard.org",
+    "lendingfuture-compass.org"
+  ],
+  "blocklist_domain_contains": [
+    "actionspeakslouderthanwords",
+    "brittenscyth"
+  ],
+
+  "allowlist_domains": [],
+  "allowlist_senders": [],
+
+  "brands": [
+    "mastercard", "visa", "american express", "amex", "paypal", "venmo", "zelle",
+    "apple", "icloud", "amazon", "netflix", "paramount", "hulu", "disney", "peacock",
+    "spotify", "chase", "wells fargo", "bank of america", "capital one", "citi", "milestone",
+    "indigo", "credit one", "walmart", "costco", "usps", "fedex", "ups", "dhl",
+    "irs", "medicare", "social security", "geek squad", "norton", "mcafee", "at&t", "verizon",
+    "t-mobile", "xfinity", "comcast", "aol", "yahoo", "microsoft", "outlook", "coinbase"
+  ],
+
+  "suspicious_tlds": [
+    "org", "info", "xyz", "top", "click", "online", "site", "shop", "live", "store",
+    "icu", "buzz", "rest", "lol", "cfd", "sbs", "bond", "monster", "quest", "fun", "space", "website"
+  ],
+
+  "bait_phrases": [
+    "credit limit", "if approved", "guaranteed", "debt relief", "credit card debt",
+    "get rid of debt", "calculate your payment", "apply now", "no security deposit",
+    "claim your", "% off", "limited time", "has expired", "renew your subscription",
+    "dear member", "dear customer", "valued member", "loyalty program", "act now",
+    "final notice", "you've been selected", "you have been selected", "pre-approved",
+    "preapproved", "prequalified", "pre-qualified", "exclusive offer", "one-time offer",
+    "special promotional rate", "verify your account", "account suspended",
+    "unusual activity", "payment failed", "update your payment", "you have won",
+    "congratulations", "free gift", "reward points", "arthritis", "joint pain",
+    "neuropathy", "tinnitus", "weight loss", "miracle"
+  ]
+}

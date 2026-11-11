@@ -1,0 +1,128 @@
+"""Move spam/phishing mail from an AOL (or any IMAP) inbox to the junk folder.
+
+HARD RULE: this program never opens, follows, or fetches any link in any email.
+It only talks to the IMAP mail server, reads headers/text with BODY.PEEK (so
+nothing is marked as read), and moves messages. No web/HTTP code exists here.
+
+Environment variables:
+  IMAP_USER       full email address (required)
+  IMAP_PASSWORD   AOL *app password*, not your normal password (required)
+  IMAP_HOST       default imap.aol.com
+  LOOKBACK_DAYS   how many days back to scan the inbox (default 3)
+  DRY_RUN         "1" = only report, don't move anything
+  VERBOSE         "1" = print sender/subject/reasons for each flagged email.
+                  Leave off on public GitHub Actions logs to keep your mail private.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import email
+import imaplib
+import os
+import re
+import sys
+from email import policy
+
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from spam_filter.classifier import classify, decode, load_rules  # noqa: E402
+
+MAX_FETCH_BYTES = 2_000_000
+JUNK_FALLBACKS = ("Bulk", "Spam", "Junk", "Bulk Mail", "Junk E-mail")
+
+
+def find_junk_folder(imap: imaplib.IMAP4) -> str:
+    typ, data = imap.list()
+    names = []
+    for raw in data or []:
+        line = raw.decode(errors="replace") if isinstance(raw, bytes) else str(raw)
+        m = re.match(r'\((?P<flags>[^)]*)\) "?[^ ]*"? (?P<name>.+)$', line)
+        if not m:
+            continue
+        name = m.group("name").strip().strip('"')
+        if "\\junk" in m.group("flags").lower():
+            return name
+        names.append(name)
+    for fb in JUNK_FALLBACKS:
+        for n in names:
+            if n.lower() == fb.lower():
+                return n
+    raise RuntimeError(f"Could not find a junk/spam folder. Folders: {names}")
+
+
+def quote(folder: str) -> str:
+    return '"' + folder.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def move(imap: imaplib.IMAP4, uid: bytes, folder: str, can_move: bool) -> None:
+    if can_move:
+        typ, _ = imap.uid("MOVE", uid, quote(folder))
+        if typ == "OK":
+            return
+    typ, _ = imap.uid("COPY", uid, quote(folder))
+    if typ != "OK":
+        raise RuntimeError(f"copy failed for uid {uid!r}")
+    imap.uid("STORE", uid, "+FLAGS.SILENT", r"(\Deleted)")
+    imap.expunge()
+
+
+def main() -> int:
+    user = os.environ.get("IMAP_USER")
+    password = os.environ.get("IMAP_PASSWORD")
+    if not user or not password:
+        print("IMAP_USER and IMAP_PASSWORD must be set.", file=sys.stderr)
+        return 2
+    host = os.environ.get("IMAP_HOST", "imap.aol.com")
+    days = int(os.environ.get("LOOKBACK_DAYS", "3"))
+    dry = os.environ.get("DRY_RUN") == "1"
+    verbose = os.environ.get("VERBOSE") == "1"
+
+    rules = load_rules()
+    threshold = int(rules.get("threshold", 6))
+
+    imap = imaplib.IMAP4_SSL(host)
+    imap.login(user, password)
+    try:
+        junk = find_junk_folder(imap)
+        can_move = "MOVE" in imap.capabilities
+        imap.select("INBOX")
+        since = (dt.date.today() - dt.timedelta(days=days)).strftime("%d-%b-%Y")
+        typ, data = imap.uid("SEARCH", None, "SINCE", since)
+        uids = data[0].split() if typ == "OK" and data and data[0] else []
+
+        scanned = flagged = 0
+        for uid in uids:
+            typ, sz = imap.uid("FETCH", uid, "(RFC822.SIZE)")
+            m = re.search(rb"RFC822\.SIZE (\d+)", sz[0] if sz and sz[0] else b"")
+            part = "BODY.PEEK[]" if m and int(m.group(1)) <= MAX_FETCH_BYTES else "BODY.PEEK[HEADER]"
+            typ, msgdata = imap.uid("FETCH", uid, f"({part})")
+            raw = next((x[1] for x in msgdata or [] if isinstance(x, tuple)), None)
+            if not raw:
+                continue
+            msg = email.message_from_bytes(raw, policy=policy.compat32)
+            scanned += 1
+            verdict = classify(msg, rules)
+            if not verdict.is_spam(threshold):
+                continue
+            flagged += 1
+            if verbose:
+                print(f"[{verdict.score}] {decode(msg.get('From'))} | {decode(msg.get('Subject'))}")
+                for r in verdict.reasons:
+                    print(f"      {r}")
+            if not dry:
+                move(imap, uid, junk, can_move)
+
+        action = "would move" if dry else "moved"
+        print(f"Scanned {scanned} inbox emails from the last {days} days; {action} {flagged} to '{junk}'.")
+    finally:
+        try:
+            imap.logout()
+        except Exception:
+            pass
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
