@@ -1,0 +1,41 @@
+name: AOL spam & phishing filter
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may delay runs a few minutes)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only report what would be moved (don't move anything)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: spam-filter
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  filter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run tests
+        run: python -m unittest discover -s tests -t .
+      - name: Move spam to Junk
+        env:
+          IMAP_USER: ${{ secrets.AOL_EMAIL }}
+          IMAP_PASSWORD: ${{ secrets.AOL_APP_PASSWORD }}
+          IMAP_HOST: imap.aol.com
+          LOOKBACK_DAYS: "3"
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
+          # Keep "0": this repo is public, so Actions logs are public. With 0 the
+          # log only shows counts, never senders or subjects.
+          VERBOSE: "0"
+        run: python spam_filter/run.py
