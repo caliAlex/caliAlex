@@ -2,7 +2,9 @@ name: AOL spam & phishing filter
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may delay runs a few minutes)
+    # Every 15 minutes, on off-peak minutes: GitHub often skips schedules set
+    # to :00/:15/:30/:45 when it is busy.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
