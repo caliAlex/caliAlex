@@ -16,14 +16,20 @@ unread), and strips links out before looking at the text.
 | Known spam domain (`rules.json`) | +10 | `wiselivingspace.com` |
 | Display name says a brand the domain doesn't match | +5 | "Indigo Mastercard" @ `lendingfuture-compass.org` |
 | Digits disguised as letters | +4 | "Expirati0n_Alert" |
+| Display name claims a website it isn't sent from | +5 | "HealthCare.com Health Insurance." |
+| Underscore-joined name | +3 | "Tivano_Affiliates" |
+| Words broken up with stray letters | +3 | "StateFa r mSaving" |
 | ALL-CAPS gibberish mailbox | +3 | `TEFORTHISNEWBEGINNING…@` |
+| Name starts with "Your …" | +2 | "Your Wellness Guide" |
+| Subject padded with extra spaces | +2 | "50%  Off  Today  Only" |
+| Uncommon `.net`/`.info`/`.org`… domain (big ISPs like comcast.net excluded) | +2 | `ergsweet.net` |
 | DMARC failed (AOL's own check) | +3 | |
 | Display name unrelated to the domain | +2 | "Arthritis" @ `foodback-yard.org` |
 | Hyphenated `.org`/`.info`/… domain, junk subdomain | +2 | |
 | Reply-To goes to a different domain | +2 | |
 | Bait wording ("credit limit", "if approved", "50% off"…) | +1 each, max 4 | |
 
-All five sample emails score 6–15 **even without the blocklist**, and normal mail
+All eleven sample emails score 7–18 **even without the blocklist**, and normal mail
 (family, Amazon, Netflix, T-Mobile, Apple) scores 0.
 
 ## One-time setup
