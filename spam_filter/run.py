@@ -68,11 +68,26 @@ def move(imap: imaplib.IMAP4, uid: bytes, folder: str, can_move: bool) -> None:
     imap.expunge()
 
 
+def check_credential(label: str, value: str) -> bool:
+    """Report typos like an accented 'ą' without ever printing the secret itself."""
+    ok = True
+    for i, ch in enumerate(value, start=1):
+        if not ch.isascii() or ch.isspace():
+            shown = "a space" if ch.isspace() else f"'{ch}'"
+            print(f"{label} has {shown} at character #{i} (of {len(value)}). "
+                  f"Retype it in GitHub secrets using plain letters only.", file=sys.stderr)
+            ok = False
+    return ok
+
+
 def main() -> int:
-    user = os.environ.get("IMAP_USER")
-    password = os.environ.get("IMAP_PASSWORD")
+    user = (os.environ.get("IMAP_USER") or "").strip()
+    password = (os.environ.get("IMAP_PASSWORD") or "").strip()
     if not user or not password:
-        print("IMAP_USER and IMAP_PASSWORD must be set.", file=sys.stderr)
+        print("AOL_EMAIL and AOL_APP_PASSWORD secrets must be set.", file=sys.stderr)
+        return 2
+    password = password.replace(" ", "")  # AOL shows app passwords in groups of 4
+    if not (check_credential("AOL_EMAIL", user) & check_credential("AOL_APP_PASSWORD", password)):
         return 2
     host = os.environ.get("IMAP_HOST", "imap.aol.com")
     days = int(os.environ.get("LOOKBACK_DAYS", "3"))
