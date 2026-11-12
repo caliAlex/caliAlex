@@ -39,6 +39,29 @@ SCREENSHOT_SPAM = [
        "GET A GUARANTEED $1,000 CREDIT LIMIT IF APPROVED"),
 ]
 
+# Round 2: the next batch that slipped through. Sender domains for the first
+# three weren't visible in the screenshots, so ordinary-looking ones are used.
+SCREENSHOT_SPAM_2 = [
+    mk('"StateFa r mSaving" <offers@brightleafmail.com>',
+       "Your Vehicle Qualify for extra saving",
+       "Discover helpful updates and new information. Explore useful details."),
+    mk('"Tivano_Affiliates" <news@tivanodeals.com>',
+       "50%  Off  Today  Only\u2014Upgrade  to  a  Safer,  Smarter  Home", ""),
+    mk('"Jacuzzi Bath Remodel Team" <team@homeprorenew.com>',
+       "Upgrade   Your   Bathroom   With   Effortless   Style", "Click here to learn more.."),
+    mk('"Your 4-in-1 Bedroom Boost" <editors@purecurehealthcov-er.info>',
+       "Feel Confident Again",
+       "Speed. Strength. Stamina. Fast-acting, clinician-prescribed, delivered discreetly. "
+       "SEE IF YOU QUALIFY"),
+    mk('"HealthCare.com Health Insurance." <enroll@coverwisemail.com>',
+       "Health Insurance Open Enrollment Period Has Started - Ends 1/15/27.",
+       "Open Enrollment closes January 15. See if I'm Eligible. Plans after tax credits."),
+    mk('"Your Wellness Guide" <koladikas@hod.ergsweet.net>',
+       "Your Body",
+       "Quick test. Did you crash around 3pm? A doctor explains how to eliminate it. "
+       "Watch the video here. Two drops under the tongue."),
+]
+
 LEGIT = [
     mk('"Mom" <mom.smith@aol.com>', "Dinner Sunday?", "Are you coming over Sunday?"),
     mk('"Chase Miller" <chase.miller@gmail.com>', "Game night", "Bring the controller."),
@@ -48,6 +71,11 @@ LEGIT = [
     mk('"T-Mobile" <noreply@t-mobile.com>', "Your bill is ready", "View your bill in the app."),
     mk('"Apple" <no_reply@email.apple.com>', "Your receipt from Apple", "Receipt"),
     mk('"Sac State Alumni" <alumni@csus.edu>', "Homecoming", "Join us this weekend."),
+    mk('"Bob Jones" <bjones@sbcglobal.net>', "Fishing trip", "You in for Saturday?"),
+    mk('"Comcast" <online.communications@alerts.comcast.net>', "Your bill is ready", "View your bill."),
+    mk('"State Farm" <statefarm@email.statefarm.com>', "Your policy documents", "Your renewal is ready."),
+    mk('"John Q Public" <jqpublic@yahoo.com>', "Lunch", "Tomorrow?"),
+    mk('"Mike" <mike@smithfamily.net>', "Pics from the BBQ", "Here they are."),
 ]
 
 
@@ -55,6 +83,12 @@ class ScreenshotSpam(unittest.TestCase):
     def test_caught_without_blocklist(self):
         rules = dict(RULES, blocklist_domains=[], blocklist_domain_contains=[])
         for msg in SCREENSHOT_SPAM:
+            v = classify(msg, rules)
+            self.assertTrue(v.is_spam(T), f"missed {msg['From']}: {v.score} {v.reasons}")
+
+    def test_round2_caught_without_blocklist(self):
+        rules = dict(RULES, blocklist_domains=[], blocklist_domain_contains=[])
+        for msg in SCREENSHOT_SPAM_2:
             v = classify(msg, rules)
             self.assertTrue(v.is_spam(T), f"missed {msg['From']}: {v.score} {v.reasons}")
 

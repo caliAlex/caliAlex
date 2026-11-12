@@ -97,6 +97,7 @@ def classify(msg: Message, rules: dict) -> Verdict:
     name_l = name.lower()
     domain_flat = re.sub(r"[^a-z0-9]", "", domain)
     local_flat = re.sub(r"[^a-z0-9]", "", local)
+    name_flat = re.sub(r"[^a-z0-9]", "", name_l)
 
     if addr in [s.lower() for s in rules.get("allowlist_senders", [])] or (
         domain and _domain_matches(domain, rules.get("allowlist_domains", []))
@@ -116,8 +117,11 @@ def classify(msg: Message, rules: dict) -> Verdict:
     #    ("Indigo Mastercard" <...@lendingfuture-compass.org>).
     for brand in rules.get("brands", []):
         brand_flat = re.sub(r"[^a-z0-9]", "", brand.lower())
+        in_name = re.search(rf"\b{re.escape(brand)}\b", name_l) or (
+            len(brand_flat) >= 6 and brand_flat in name_flat  # "StateFa r m" -> "statefarm"
+        )
         if (
-            re.search(rf"\b{re.escape(brand)}\b", name_l)
+            in_name
             and brand_flat not in domain_flat
             and brand_flat not in local_flat  # e.g. a real person "Chase Miller" <chase.miller@...>
         ):
@@ -134,11 +138,43 @@ def classify(msg: Message, rules: dict) -> Verdict:
     if _LEET_RE.search(name):
         v.add(4, "digits disguised as letters in display name")
 
+    # 4b. Display name tricks: a website name that isn't the sender
+    #     ("HealthCare.com Health Insurance." from some other domain).
+    for site in re.findall(r"\b([a-z0-9-]+\.(?:com|net|org|gov|us|co))\b", name_l):
+        if site not in domain:
+            v.add(5, f"display name claims to be {site} but sender is {reg}")
+            break
+
+    #     Words glued with underscores ("Tivano_Affiliates", "Expirati0n_Alert").
+    if re.search(r"[A-Za-z]_[A-Za-z]", name):
+        v.add(3, "underscore-joined display name")
+
+    #     Words broken up to dodge filters ("StateFa r mSaving").
+    if re.search(r"(?:^|\s)[b-z](?=\s|$)", name):
+        v.add(3, "words broken up with stray letters")
+
+    #     Generic "Your ..." sender names ("Your Wellness Guide", "Your 4-in-1 Bedroom Boost").
+    if re.match(r"\s*your\b", name_l):
+        v.add(2, "display name starts with 'Your'")
+
+    #     Odd trailing punctuation ("HealthCare.com Health Insurance.").
+    if name.rstrip().endswith((".", "!")):
+        v.add(1, "display name ends with punctuation")
+
+    #     Subject padded with extra spaces ("50%  Off  Today  Only").
+    subject = decode(msg.get("Subject"))
+    if re.search(r"\S(?: {2,}|[\u00a0\u2000-\u200b\u3000]+)\S", subject):
+        v.add(2, "subject padded with odd spacing")
+
     # 5. Throwaway-looking sending domain.
     sld = reg.split(".")[0] if reg else ""
     tld = reg.rsplit(".", 1)[-1] if reg else ""
     if "-" in sld and tld in rules.get("suspicious_tlds", []):
         v.add(2, f"hyphenated .{tld} domain")
+    if tld in rules.get("suspicious_tlds", []) and "-" not in sld and not _domain_matches(
+        domain, rules.get("trusted_isp_domains", [])
+    ):
+        v.add(2, f"uncommon .{tld} sender domain")
     if len(sld) >= 15:
         v.add(1, "very long domain name")
     if domain.count(".") >= 2 and any(len(label) >= 20 for label in domain.split(".")):
@@ -166,7 +202,7 @@ def classify(msg: Message, rules: dict) -> Verdict:
         v.add(2, "SPF/DKIM failed")
 
     # 9. Typical bait wording in subject/body (capped).
-    text = (decode(msg.get("Subject")) + " " + body_text(msg)).lower()
+    text = re.sub(r"[\s\u00a0\u2000-\u200b\u3000]+", " ", subject + " " + body_text(msg)).lower()
     hits = [p for p in rules.get("bait_phrases", []) if p.lower() in text]
     if hits:
         pts = min(len(hits), 4)
