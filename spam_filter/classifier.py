@@ -138,6 +138,8 @@ def classify(msg: Message, rules: dict) -> Verdict:
     if _LEET_RE.search(name):
         v.add(4, "digits disguised as letters in display name")
 
+    raw_local_early = parseaddr(msg.get("From", ""))[1].partition("@")[0]
+
     # 4b. Display name tricks: a website name that isn't the sender
     #     ("HealthCare.com Health Insurance." from some other domain).
     for site in re.findall(r"\b([a-z0-9-]+\.(?:com|net|org|gov|us|co))\b", name_l):
@@ -152,6 +154,14 @@ def classify(msg: Message, rules: dict) -> Verdict:
     #     Words broken up to dodge filters ("StateFa r mSaving").
     if re.search(r"(?:^|\s)[b-z](?=\s|$)", name):
         v.add(3, "words broken up with stray letters")
+
+    #     Brand + pipe/dash tagline ("Globe Life | Insurance Details").
+    if re.search(r"\s[|•·]\s", name):
+        v.add(2, "display name has a '|' tagline")
+
+    #     Mailbox with a hyphenated brand-ish prefix ("GO-Giltch@").
+    if re.match(r"^[A-Z]{2,}-[A-Z][a-z]+$", raw_local_early):
+        v.add(1, "odd mailbox name")
 
     #     Doubled punctuation used as decoration ("Night__Vision -- Pro Team").
     if re.search(r"--|__", name):

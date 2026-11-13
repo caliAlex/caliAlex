@@ -68,6 +68,10 @@ SCREENSHOT_SPAM_3 = [
        "Special Survey. Exclusive Offer. Complete the survey and get a 100% discount code. Start the survey now"),
     mk('"Night__Vision -- Pro Team" <hello@cartzoomworld.info>', "See - the road at night - with your eyes__wide open",
        "Introducing Night Vision Glasses. 50% off. Drive with confidence"),
+    mk('"Ethos Team Affiliate" <GO-Giltch@onlineecreditap-provals.info>', "Ethos Life Insurance for your loved ones",
+       "Skip the line. Life insurance for every budget. No medical exams. Same-day coverage. See my rates"),
+    mk('"Globe Life | Insurance Details" <emails@creditbuildmadeeasy.com>', "Get   $   100,000   Life   Insurance   For   $1",
+       "Click here. Get a FREE Quote in seconds. No medical exam. No waiting period. Fast approval process."),
 ]
 
 LEGIT = [

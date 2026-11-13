@@ -10,7 +10,9 @@
     "ergsweet.net",
     "healthcare.com",
     "motorcycle-magnify.com",
-    "cartzoomworld.info"
+    "cartzoomworld.info",
+    "onlineecreditap-provals.info",
+    "creditbuildmadeeasy.com"
   ],
   "blocklist_domain_contains": [
     "actionspeakslouderthanwords",
@@ -84,7 +86,18 @@
     "aetna",
     "unitedhealthcare",
     "humana",
-    "kaiser"
+    "kaiser",
+    "ethos",
+    "globe life",
+    "mutual of omaha",
+    "colonial penn",
+    "lemonade",
+    "policygenius",
+    "selectquote",
+    "metlife",
+    "prudential",
+    "new york life",
+    "northwestern mutual"
   ],
   "suspicious_tlds": [
     "org",
@@ -203,7 +216,22 @@
     "special survey",
     "black friday",
     "drive with confidence",
-    "night vision"
+    "night vision",
+    "life insurance",
+    "no medical exam",
+    "same-day coverage",
+    "money-back guarantee",
+    "see my rates",
+    "free quote",
+    "no waiting period",
+    "fast approval",
+    "apply online",
+    "skip the line",
+    "for every budget",
+    "protect your family",
+    "protecting your family",
+    "rates as low as",
+    "get a quote"
   ],
   "trusted_isp_domains": [
     "comcast.net",
