@@ -11,6 +11,10 @@ on:
         description: "Only report what would be moved (don't move anything)"
         type: boolean
         default: true
+      lookback_days:
+        description: "How many days of inbox to scan (use 60+ for a one-time cleanup)"
+        type: number
+        default: 7
 
 concurrency:
   group: spam-filter
@@ -35,7 +39,7 @@ jobs:
           IMAP_USER: ${{ secrets.AOL_EMAIL }}
           IMAP_PASSWORD: ${{ secrets.AOL_APP_PASSWORD }}
           IMAP_HOST: imap.aol.com
-          LOOKBACK_DAYS: "3"
+          LOOKBACK_DAYS: ${{ inputs.lookback_days || 7 }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
           # Keep "0": this repo is public, so Actions logs are public. With 0 the
           # log only shows counts, never senders or subjects.

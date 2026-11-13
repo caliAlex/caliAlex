@@ -62,6 +62,14 @@ SCREENSHOT_SPAM_2 = [
        "Watch the video here. Two drops under the tongue."),
 ]
 
+# Round 3.
+SCREENSHOT_SPAM_3 = [
+    mk('"UnitedHealthcare" <CrimsonHarbor@motorcycle-magnify.com>', "UnitedHealthcare Black Friday Surprise",
+       "Special Survey. Exclusive Offer. Complete the survey and get a 100% discount code. Start the survey now"),
+    mk('"Night__Vision -- Pro Team" <hello@cartzoomworld.info>', "See - the road at night - with your eyes__wide open",
+       "Introducing Night Vision Glasses. 50% off. Drive with confidence"),
+]
+
 LEGIT = [
     mk('"Mom" <mom.smith@aol.com>', "Dinner Sunday?", "Are you coming over Sunday?"),
     mk('"Chase Miller" <chase.miller@gmail.com>', "Game night", "Bring the controller."),
@@ -88,7 +96,7 @@ class ScreenshotSpam(unittest.TestCase):
 
     def test_round2_caught_without_blocklist(self):
         rules = dict(RULES, blocklist_domains=[], blocklist_domain_contains=[])
-        for msg in SCREENSHOT_SPAM_2:
+        for msg in SCREENSHOT_SPAM_2 + SCREENSHOT_SPAM_3:
             v = classify(msg, rules)
             self.assertTrue(v.is_spam(T), f"missed {msg['From']}: {v.score} {v.reasons}")
 
