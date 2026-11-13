@@ -146,12 +146,16 @@ def classify(msg: Message, rules: dict) -> Verdict:
             break
 
     #     Words glued with underscores ("Tivano_Affiliates", "Expirati0n_Alert").
-    if re.search(r"[A-Za-z]_[A-Za-z]", name):
+    if re.search(r"[A-Za-z]_+[A-Za-z]", name):  # "Tivano_Affiliates", "Night__Vision"
         v.add(3, "underscore-joined display name")
 
     #     Words broken up to dodge filters ("StateFa r mSaving").
     if re.search(r"(?:^|\s)[b-z](?=\s|$)", name):
         v.add(3, "words broken up with stray letters")
+
+    #     Doubled punctuation used as decoration ("Night__Vision -- Pro Team").
+    if re.search(r"--|__", name):
+        v.add(1, "doubled punctuation in display name")
 
     #     Generic "Your ..." sender names ("Your Wellness Guide", "Your 4-in-1 Bedroom Boost").
     if re.match(r"\s*your\b", name_l):

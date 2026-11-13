@@ -8,7 +8,9 @@
     "lendingfuture-compass.org",
     "purecurehealthcov-er.info",
     "ergsweet.net",
-    "healthcare.com"
+    "healthcare.com",
+    "motorcycle-magnify.com",
+    "cartzoomworld.info"
   ],
   "blocklist_domain_contains": [
     "actionspeakslouderthanwords",
@@ -194,7 +196,14 @@
     "under the tongue",
     "blood sugar",
     "belly fat",
-    "quick test"
+    "quick test",
+    "100% discount",
+    "discount code",
+    "start the survey",
+    "special survey",
+    "black friday",
+    "drive with confidence",
+    "night vision"
   ],
   "trusted_isp_domains": [
     "comcast.net",
