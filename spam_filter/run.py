@@ -23,6 +23,7 @@ import os
 import re
 import sys
 from email import policy
+from email.utils import parseaddr
 
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -107,27 +108,49 @@ def main() -> int:
         typ, data = imap.uid("SEARCH", None, "SINCE", since)
         uids = data[0].split() if typ == "OK" and data and data[0] else []
 
-        scanned = flagged = 0
-        for uid in uids:
-            typ, sz = imap.uid("FETCH", uid, "(RFC822.SIZE)")
-            m = re.search(rb"RFC822\.SIZE (\d+)", sz[0] if sz and sz[0] else b"")
-            part = "BODY.PEEK[]" if m and int(m.group(1)) <= MAX_FETCH_BYTES else "BODY.PEEK[HEADER]"
-            typ, msgdata = imap.uid("FETCH", uid, f"({part})")
-            raw = next((x[1] for x in msgdata or [] if isinstance(x, tuple)), None)
-            if not raw:
-                continue
-            msg = email.message_from_bytes(raw, policy=policy.compat32)
-            scanned += 1
-            verdict = classify(msg, rules)
-            if not verdict.is_spam(threshold):
-                continue
-            flagged += 1
-            if verbose:
-                print(f"[{verdict.score}] {decode(msg.get('From'))} | {decode(msg.get('Subject'))}")
-                for r in verdict.reasons:
-                    print(f"      {r}")
-            if not dry:
-                move(imap, uid, junk, can_move)
+        # Fetch in batches: one round-trip per batch instead of two per email.
+        sizes: dict[bytes, int] = {}
+        for i in range(0, len(uids), 200):
+            typ, data = imap.uid("FETCH", b",".join(uids[i:i + 200]), "(UID RFC822.SIZE)")
+            for line in data or []:
+                line = line if isinstance(line, bytes) else (line[0] if isinstance(line, tuple) else b"")
+                m = re.search(rb"UID (\d+)", line)
+                n = re.search(rb"RFC822\.SIZE (\d+)", line)
+                if m and n:
+                    sizes[m.group(1)] = int(n.group(1))
+
+        small = [u for u in uids if sizes.get(u, 0) <= MAX_FETCH_BYTES]
+        large = [u for u in uids if sizes.get(u, 0) > MAX_FETCH_BYTES]
+        scanned = 0
+        spam_uids: list[bytes] = []
+        for group, part, batch in ((small, "BODY.PEEK[]", 25), (large, "BODY.PEEK[HEADER]", 100)):
+            for i in range(0, len(group), batch):
+                typ, data = imap.uid("FETCH", b",".join(group[i:i + batch]), f"(UID {part})")
+                for item in data or []:
+                    if not isinstance(item, tuple):
+                        continue
+                    m = re.search(rb"UID (\d+)", item[0])
+                    if not m:
+                        continue
+                    msg = email.message_from_bytes(item[1], policy=policy.compat32)
+                    scanned += 1
+                    verdict = classify(msg, rules)
+                    if not verdict.is_spam(threshold):
+                        continue
+                    spam_uids.append(m.group(1))
+                    # Spam sender domains only (never subjects or legit mail), so
+                    # the public log shows what was caught without exposing your mail.
+                    sender = parseaddr(decode(msg.get("From")))[1]
+                    print(f"  junk [{verdict.score:>2}] {sender.rpartition('@')[2] or '?'}")
+                    if verbose:
+                        print(f"[{verdict.score}] {decode(msg.get('From'))} | {decode(msg.get('Subject'))}")
+                        for r in verdict.reasons:
+                            print(f"      {r}")
+
+        flagged = len(spam_uids)
+        if not dry:
+            for i in range(0, len(spam_uids), 100):
+                move(imap, b",".join(spam_uids[i:i + 100]), junk, can_move)
 
         action = "would move" if dry else "moved"
         print(f"Scanned {scanned} inbox emails from the last {days} days; {action} {flagged} to '{junk}'.")
