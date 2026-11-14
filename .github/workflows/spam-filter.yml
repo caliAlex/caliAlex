@@ -2,22 +2,28 @@ name: AOL spam & phishing filter
 
 on:
   schedule:
-    # Every 15 minutes, on off-peak minutes: GitHub often skips schedules set
-    # to :00/:15/:30/:45 when it is busy.
-    - cron: "7,22,37,52 * * * *"
+    # Each scheduled run stays on for ~5h40m and checks the inbox every 5 minutes.
+    # GitHub fires schedules late and irregularly, so it's requested hourly: one
+    # waits in line and takes over as soon as the current one finishes.
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
         description: "Only report what would be moved (don't move anything)"
         type: boolean
         default: true
+      stay_on:
+        description: "Keep running and check every 5 minutes for ~5h40m (instead of checking once)"
+        type: boolean
+        default: false
       lookback_days:
         description: "How many days of inbox to scan (use 60+ for a one-time cleanup)"
         type: number
         default: 7
 
 concurrency:
-  group: spam-filter
+  # Only one always-on watcher at a time; one-off manual checks run separately.
+  group: ${{ (github.event_name == 'schedule' || inputs.stay_on) && 'spam-filter-watch' || github.run_id }}
   cancel-in-progress: false
 
 permissions:
@@ -26,7 +32,7 @@ permissions:
 jobs:
   filter:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -42,6 +48,10 @@ jobs:
           LOOKBACK_DAYS: ${{ inputs.lookback_days || 7 }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
           # Keep "0": this repo is public, so Actions logs are public. With 0 the
-          # log only shows counts, never senders or subjects.
+          # log only shows counts and the domains of junked spam, never your real
+          # mail, subjects or who you've emailed.
           VERBOSE: "0"
+          LOOP_MINUTES: ${{ (github.event_name == 'schedule' || inputs.stay_on) && '340' || '0' }}
+          CHECK_EVERY: "5"
+          PYTHONUNBUFFERED: "1"  # show each check in the log as it happens
         run: python spam_filter/run.py

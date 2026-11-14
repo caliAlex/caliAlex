@@ -4,6 +4,8 @@ import unittest
 from spam_filter.classifier import classify, load_rules
 
 RULES = load_rules()
+RULES["_self_address"] = "mericali916@aol.com"
+# Domains the inbox has seen before (built from real mail at run time); legit senders below.
 T = RULES["threshold"]
 
 
@@ -85,6 +87,24 @@ SCREENSHOT_SPAM_4 = [
     mk('"Payment Declined" <edpleiroumh@bartiancreative.com>', "Final Warning: Your Payment Was Declined", "=20"),
 ]
 
+# Round 5 (none of these domains are blocklisted: they must be caught by the generic rules).
+SCREENSHOT_SPAM_5 = [
+    mk('"shopperopinionpanel" <qeffowyvk@atdserve.com>', "Explore your Costco YETI Wagon offer:2",
+       "Black Friday customer survey. Share your Costco shopping experience and get a special offer. Take the survey now"),
+    mk('"mericali916" <qeffowyvk@atdserve.com>', "Your prime membership has expired",
+       "Your membership has expired. Dear Member, your Prime subscription expired TODAY. Personal verification key. Confirm"),
+    mk('"The wvramuse" <chikolasa@goj.wvramuse.com>', "wvramuse",
+       "Two Voices. Do you ever finish a walk and feel like you got more done?"),
+    mk('"Ultrasound for Brain?" <CrimsonWillow@kenyonsimpson.net>', "US Researchers Plan Discussion on Ultrasound",
+       "Federal medical device officials have scheduled a public workshop."),
+    mk('"Fisher Retirement Insight" <gallery@studio.artisticdog.com>', "The Definitive Guide to Retirement Income",
+       "Is your comfortable retirement guaranteed? Get your FREE guide. You are not committed to anything"),
+    mk('"GEIC0" <postmail@zyeagency.com>', "Important - Action Required",
+       "Rates are changing fast - secure your updated quote today. You may qualify. Choose your current provider"),
+    mk('"GEIC O \u00aeBlueRoad" <hjzdj@tgtdyghz.lifeblood-knives.com>', "Your Auto Insurance Offer Is Waiting",
+       "Congratulations! You've been selected for an exclusive insurance offer."),
+]
+
 LEGIT = [
     mk('"Mom" <mom.smith@aol.com>', "Dinner Sunday?", "Are you coming over Sunday?"),
     mk('"Chase Miller" <chase.miller@gmail.com>', "Game night", "Bring the controller."),
@@ -103,7 +123,17 @@ LEGIT = [
     mk('"Chase Payment Alert" <no.reply.alerts@chase.com>', "Payment received", "We received your payment."),
     mk('"USPS Informed Delivery" <USPSInformeddelivery@email.informeddelivery.usps.com>', "Your mail today", "Mail coming."),
     mk('"Kaiser Permanente" <noreply@kp.org>', "Appointment reminder", "Your visit is tomorrow."),
+    mk('"Jake Schmidt" <jschmidt@gmail.com>', "Saturday", "Still on?"),
+    mk('"GitHub" <noreply@github.com>', "[caliAlex] Run failed", "Your workflow run failed."),
+    mk('"Target" <Target@em.target.com>', "Weekend deals", "Shop deals."),
+    mk('"Costco Wholesale" <costco@digital.costco.com>', "Member savings", "This week's savings."),
+    mk('"Ticketmaster" <customer_support@email.ticketmaster.com>', "Your tickets", "Order confirmed."),
 ]
+
+
+from spam_filter.classifier import registered_domain as _rd
+from email.utils import parseaddr as _pa
+RULES["_familiar_domains"] = {_rd(_pa(m["From"])[1].split("@")[1]) for m in LEGIT}
 
 
 class ScreenshotSpam(unittest.TestCase):
@@ -115,7 +145,7 @@ class ScreenshotSpam(unittest.TestCase):
 
     def test_round2_caught_without_blocklist(self):
         rules = dict(RULES, blocklist_domains=[], blocklist_domain_contains=[])
-        for msg in SCREENSHOT_SPAM_2 + SCREENSHOT_SPAM_3 + SCREENSHOT_SPAM_4:
+        for msg in SCREENSHOT_SPAM_2 + SCREENSHOT_SPAM_3 + SCREENSHOT_SPAM_4 + SCREENSHOT_SPAM_5:
             v = classify(msg, rules)
             self.assertTrue(v.is_spam(T), f"missed {msg['From']}: {v.score} {v.reasons}")
 

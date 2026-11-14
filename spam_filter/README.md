@@ -1,6 +1,6 @@
 # AOL spam & phishing filter
 
-Every 15 minutes this checks the AOL inbox and moves spam/phishing to AOL's
+It runs nearly nonstop, checking the AOL inbox every 5 minutes. It and moves spam/phishing to AOL's
 **Spam** folder (shown as **Junk** on iPhone). Nothing is deleted, so a
 mistake can be dragged back. It has no blocked-sender limit like iPhone's 3,000.
 
@@ -8,6 +8,14 @@ mistake can be dragged back. It has no blocked-sender limit like iPhone's 3,000.
 only talks to AOL's mail server, reads text with `BODY.PEEK` (emails stay
 unread), and strips links out before looking at the text.
 `tests/test_no_network.py` fails the build if web code is ever added.
+
+## It learns from your mailbox
+
+- **People you've emailed** (from your Sent folder) are never touched.
+- **Domains in your Junk folder** get blocked automatically. Swipe a spam email
+  to Junk once and that sender's domain is junked from then on.
+- **Domains that have been in your inbox for weeks** get a little benefit of the doubt;
+  **brand-new domains** (what spammers use) get a little suspicion.
 
 ## How it decides (score ≥ 6 → Junk)
 
