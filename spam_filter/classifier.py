@@ -134,6 +134,24 @@ def classify(msg: Message, rules: dict) -> Verdict:
     if name_words and domain and not any(w in domain_flat or w in local_flat for w in name_words):
         v.add(2, "display name unrelated to sender domain")
 
+    unrelated = bool(name_words) and bool(domain) and not any(
+        w in domain_flat or w in local_flat for w in name_words
+    )
+    if unrelated:
+        # 3b. Alarm-style sender names from an unrelated domain
+        #     ("Credit Card Alert", "Payment Declined", "Expiration Alert").
+        alarm = [w for w in rules.get("alarm_name_words", []) if re.search(rf"\b{re.escape(w)}\b", name_l)]
+        if alarm:
+            v.add(4, f"alarm-style sender name ('{alarm[0]}') from unrelated domain")
+        # 3c. Generic business-sounding names ("Provide Auto Insurance", "Client Support").
+        generic = [w for w in rules.get("generic_name_words", []) if re.search(rf"\b{re.escape(w)}\b", name_l)]
+        if generic and not alarm:
+            v.add(2, f"generic business name ('{generic[0]}') from unrelated domain")
+
+    # 3d. Affiliate marketers ("Ethos Team Affiliate", "Direct Meds GLP-1 Affiliate").
+    if re.search(r"\baffiliates?\b", name_l):
+        v.add(3, "affiliate marketer in display name")
+
     # 4. Look-alike characters in the display name ("Expirati0n_Alert").
     if _LEET_RE.search(name):
         v.add(4, "digits disguised as letters in display name")

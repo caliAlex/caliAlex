@@ -74,6 +74,17 @@ SCREENSHOT_SPAM_3 = [
        "Click here. Get a FREE Quote in seconds. No medical exam. No waiting period. Fast approval process."),
 ]
 
+# Round 4.
+SCREENSHOT_SPAM_4 = [
+    mk('"Provide Auto Insurance" <jkrsstakh@cornerstonetesting.com>', "Important Information About Your Insurance",
+       "Let's Drop Your Rate! Request the best carrier quotes in your area for savings up to 50% on Car Insurance."),
+    mk('"Direct Meds GLP-1 Affiliate" <RABIN@productdiscovery-hub.info>', "Diets Aren't Failing You",
+       "GLP-1 medications. Weight loss. Semaglutide and Tirzepatide. Take Your Online Assessment"),
+    mk('"Credit Card Alert" <jkrsstakh@cornerstonetesting.com>', "Balance Transfer Card 2027",
+       "Take advantage of this offer - learn how to apply now. 0% intro APR. 5% cash back."),
+    mk('"Payment Declined" <edpleiroumh@bartiancreative.com>', "Final Warning: Your Payment Was Declined", "=20"),
+]
+
 LEGIT = [
     mk('"Mom" <mom.smith@aol.com>', "Dinner Sunday?", "Are you coming over Sunday?"),
     mk('"Chase Miller" <chase.miller@gmail.com>', "Game night", "Bring the controller."),
@@ -88,6 +99,10 @@ LEGIT = [
     mk('"State Farm" <statefarm@email.statefarm.com>', "Your policy documents", "Your renewal is ready."),
     mk('"John Q Public" <jqpublic@yahoo.com>', "Lunch", "Tomorrow?"),
     mk('"Mike" <mike@smithfamily.net>', "Pics from the BBQ", "Here they are."),
+    mk('"Bank of America Alerts" <onlinebanking@ealerts.bankofamerica.com>', "Your statement is ready", "View it online."),
+    mk('"Chase Payment Alert" <no.reply.alerts@chase.com>', "Payment received", "We received your payment."),
+    mk('"USPS Informed Delivery" <USPSInformeddelivery@email.informeddelivery.usps.com>', "Your mail today", "Mail coming."),
+    mk('"Kaiser Permanente" <noreply@kp.org>', "Appointment reminder", "Your visit is tomorrow."),
 ]
 
 
@@ -100,7 +115,7 @@ class ScreenshotSpam(unittest.TestCase):
 
     def test_round2_caught_without_blocklist(self):
         rules = dict(RULES, blocklist_domains=[], blocklist_domain_contains=[])
-        for msg in SCREENSHOT_SPAM_2 + SCREENSHOT_SPAM_3:
+        for msg in SCREENSHOT_SPAM_2 + SCREENSHOT_SPAM_3 + SCREENSHOT_SPAM_4:
             v = classify(msg, rules)
             self.assertTrue(v.is_spam(T), f"missed {msg['From']}: {v.score} {v.reasons}")
 

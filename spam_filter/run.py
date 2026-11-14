@@ -23,6 +23,7 @@ import os
 import re
 import sys
 from email import policy
+from email.utils import parseaddr
 
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -137,6 +138,10 @@ def main() -> int:
                     if not verdict.is_spam(threshold):
                         continue
                     spam_uids.append(m.group(1))
+                    # Spam sender domains only (never subjects or legit mail), so
+                    # the public log shows what was caught without exposing your mail.
+                    sender = parseaddr(decode(msg.get("From")))[1]
+                    print(f"  junk [{verdict.score:>2}] {sender.rpartition('@')[2] or '?'}")
                     if verbose:
                         print(f"[{verdict.score}] {decode(msg.get('From'))} | {decode(msg.get('Subject'))}")
                         for r in verdict.reasons:
