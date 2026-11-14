@@ -47,7 +47,8 @@
     "paypal.com",
     "venmo.com",
     "apple.com",
-    "icloud.com"
+    "icloud.com",
+    "xfinity.com"
   ],
   "allowlist_senders": [],
   "brands": [
@@ -303,7 +304,18 @@
     "rr.com",
     "icloud.com",
     "me.com",
-    "mac.com"
+    "mac.com",
+    "gmail.com",
+    "googlemail.com",
+    "yahoo.com",
+    "ymail.com",
+    "aol.com",
+    "outlook.com",
+    "hotmail.com",
+    "live.com",
+    "msn.com",
+    "protonmail.com",
+    "proton.me"
   ],
   "alarm_name_words": [
     "alert",

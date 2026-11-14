@@ -27,6 +27,54 @@ _WORD_RE = re.compile(r"[a-z]{4,}")
 _TWO_PART_TLDS = {"co.uk", "com.au", "co.nz", "co.jp", "com.br", "com.mx", "co.in"}
 
 
+_RARE_BIGRAMS = set(
+    "bq bx cj cv cx dx fq fv fx fz gq gv gx hx jb jc jd jf jg jh jj jk jl jm jn jp jq jr js jt jv jw jx jy jz "
+    "kq kx kz mx pq px pz qb qc qd qe qf qg qh qj qk ql qm qn qo qp qq qr qs qt qv qw qx qy qz sx vb vc vd vf vg "
+    "vh vj vk vm vn vp vq vt vw vx vz wq wv wx xj xk xq xv xz yq yv yy zb zd zf zg zj zk zp zq zr zs zt zv zx "
+    "hj dj gz tg wy".split()
+)
+_VOWELS = set("aeiouy")
+_COMMON_SUBDOMAINS = set(
+    "mail email emails e em mailer mailers news newsletter newsletters info m mg mkt marketing send reply "
+    "bounce notifications notification notify alerts alert ealerts updates update service services accounts "
+    "account comms communications members member t go click links link msg messages support noreply no-reply "
+    "sg mc mta smtp out outbound mx www my mymail txn transactional connect hello offers deals promo promotions "
+    "customer customers care billing secure messaging engage campaign campaigns r rs edm crm".split()
+)
+
+
+def looks_gibberish(word: str) -> bool:
+    """Random-looking strings like 'qeffowyvk', 'hjzdj', 'tgtdyghz' (not real names/words)."""
+    w = re.sub(r"[^a-z]", "", word.lower())
+    if len(w) < 4:
+        return False
+    if not any(c in _VOWELS for c in w):
+        return True
+    if re.search(r"q(?!u)", w):
+        return True
+    run = longest = 0
+    for c in w:
+        run = 0 if c in _VOWELS else run + 1
+        longest = max(longest, run)
+    if longest >= 5:
+        return True
+    rare = sum(1 for i in range(len(w) - 1) if w[i:i + 2] in _RARE_BIGRAMS)
+    return rare >= 2 or (rare >= 1 and len(w) <= 6)
+
+
+def unpronounceable_start(word: str) -> bool:
+    """'wvramuse' starts with 'wv', a letter pair no English word starts with."""
+    w = re.sub(r"[^a-z]", "", word.lower())
+    return len(w) >= 5 and w[:2] in _RARE_BIGRAMS
+
+
+def normalize_lookalikes(text: str) -> str:
+    """'GEIC0' -> 'geico', 'N3tflix' -> 'netflix' (digits used as letters inside words)."""
+    table = str.maketrans({"0": "o", "1": "l", "3": "e", "5": "s", "7": "t", "4": "a", "@": "a", "$": "s"})
+    return re.sub(r"[A-Za-z]*[0-9@$][A-Za-z0-9@$]*", lambda m: m.group(0).translate(table)
+                  if re.search(r"[A-Za-z]", m.group(0)) else m.group(0), text)
+
+
 def load_rules(path: Path = RULES_PATH) -> dict:
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
@@ -94,10 +142,15 @@ def classify(msg: Message, rules: dict) -> Verdict:
     addr = addr.lower()
     local, _, domain = addr.partition("@")
     reg = registered_domain(domain) if domain else ""
-    name_l = name.lower()
+    name_l = normalize_lookalikes(name).lower()
     domain_flat = re.sub(r"[^a-z0-9]", "", domain)
     local_flat = re.sub(r"[^a-z0-9]", "", local)
     name_flat = re.sub(r"[^a-z0-9]", "", name_l)
+
+    if addr in rules.get("_trusted_senders", set()):
+        v.allowlisted = True
+        v.reasons.append("you've emailed this sender before")
+        return v
 
     if addr in [s.lower() for s in rules.get("allowlist_senders", [])] or (
         domain and _domain_matches(domain, rules.get("allowlist_domains", []))
@@ -118,7 +171,7 @@ def classify(msg: Message, rules: dict) -> Verdict:
     for brand in rules.get("brands", []):
         brand_flat = re.sub(r"[^a-z0-9]", "", brand.lower())
         in_name = re.search(rf"\b{re.escape(brand)}\b", name_l) or (
-            len(brand_flat) >= 6 and brand_flat in name_flat  # "StateFa r m" -> "statefarm"
+            len(brand_flat) >= 5 and brand_flat in name_flat  # "StateFa r m" -> "statefarm"
         )
         if (
             in_name
@@ -152,8 +205,52 @@ def classify(msg: Message, rules: dict) -> Verdict:
     if re.search(r"\baffiliates?\b", name_l):
         v.add(3, "affiliate marketer in display name")
 
+    # 3e. Learned from your Junk folder: domains you (or AOL) already junked.
+    if reg and reg in rules.get("_learned_junk_domains", set()):
+        v.add(5, f"{reg} is already in your Junk folder")
+
+    # 3f. A sending domain you've never received mail from before.
+    familiar = rules.get("_familiar_domains")
+    if familiar is not None and reg and reg not in familiar:
+        v.add(2, "first-time sender domain")
+    elif familiar is not None and reg in familiar:
+        v.add(-2, "sender has emailed you for weeks")
+
+    # 3g. Sender name is YOUR own username ("mericali916" <x@atdserve.com>).
+    me = rules.get("_self_address", "")
+    raw_name = name.strip().lower()
+    if me and raw_name and raw_name in (me.lower(), me.lower().partition("@")[0]) and addr != me.lower():
+        v.add(8, "sender pretends to be you")
+
+    # 3h. Random-looking mailbox or sending host ("qeffowyvk@", "hjzdj@tgtdyghz.").
+    if looks_gibberish(local):
+        v.add(2, "random-looking mailbox name")
+    labels = domain.split(".")
+    subs = labels[:-len(reg.split("."))] if reg else []
+    odd_subs = [l for l in subs if l not in _COMMON_SUBDOMAINS]
+    random_sub = any(looks_gibberish(l) or len(l) <= 4 for l in odd_subs)
+    if odd_subs and (unrelated or random_sub):
+        v.add(3 if random_sub else 2,
+              f"unusual sending host '{odd_subs[0]}.'")
+    if reg and not _domain_matches(domain, rules.get("trusted_isp_domains", [])) and (
+        looks_gibberish(reg.split(".")[0]) or unpronounceable_start(reg.split(".")[0])
+    ):
+        v.add(3, "random-looking domain name")
+
+    # 3i. Odd sender-name styles.
+    if "?" in name:
+        v.add(3, "sender name is a question")
+    if re.search(r"[®™©]", name):
+        v.add(2, "trademark symbol in sender name")
+    if re.fullmatch(r"[a-z]{14,}", name.strip()):
+        v.add(2, "mashed-together lowercase sender name")
+    if re.fullmatch(r"(?:[A-Z][a-z]{3,}){2}", parseaddr(msg.get("From", ""))[1].partition("@")[0]):
+        v.add(1, "made-up 'WordWord' mailbox name")
+    if msg.get("List-Unsubscribe") and unrelated:
+        v.add(2, "mass mailing from a sender whose name doesn't match its domain")
+
     # 4. Look-alike characters in the display name ("Expirati0n_Alert").
-    if _LEET_RE.search(name):
+    if _LEET_RE.search(name) or re.search(r"\b[A-Z]{2,}[015][A-Z]*\b", name):
         v.add(4, "digits disguised as letters in display name")
 
     raw_local_early = parseaddr(msg.get("From", ""))[1].partition("@")[0]
