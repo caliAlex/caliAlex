@@ -2,10 +2,10 @@ name: AOL spam & phishing filter
 
 on:
   schedule:
-    # Each scheduled run stays on for ~5h40m and checks the inbox every 5 minutes.
-    # GitHub fires schedules late and irregularly, so it's requested hourly: one
-    # waits in line and takes over as soon as the current one finishes.
-    - cron: "17 * * * *"
+    # Each watcher stays on ~5h40m, checking the inbox every 5 minutes, and lines up
+    # its own replacement the moment it starts, so there's no gap between them.
+    # This schedule is only a backup that restarts the chain if it ever breaks.
+    - cron: "17 */2 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -28,12 +28,19 @@ concurrency:
 
 permissions:
   contents: read
+  actions: write  # lets a watcher line up the next watcher
 
 jobs:
   filter:
     runs-on: ubuntu-latest
     timeout-minutes: 355
     steps:
+      - name: Line up the next watcher
+        # It waits in line (same concurrency group) and starts as soon as this one ends.
+        if: github.event_name == 'schedule' || inputs.stay_on
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run spam-filter.yml --repo "$GITHUB_REPOSITORY" --ref main -f stay_on=true -f dry_run=false
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:

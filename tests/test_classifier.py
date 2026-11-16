@@ -105,6 +105,14 @@ SCREENSHOT_SPAM_5 = [
        "Congratulations! You've been selected for an exclusive insurance offer."),
 ]
 
+# Round 6.
+SCREENSHOT_SPAM_6 = [
+    mk('"T-Mobile\u00aeConnected5G" <yugcfbhjfd@jdbhnf.nbcemit.org>', "Ready for faster internet?",
+       "Still paying $80+ for internet? T-Mobile 5G Home Internet for as low as $35/mo. Limited time offer ends soon!"),
+    mk('"Deeply Cleansed lungs" <PROVETHATYOUONCEFOUGHTANDSUR@listenmorethanyouspeak.borealisraoul.com>',
+       "BREATHE: hidden knowledge", "URGENT: toxic sludge. The Vick Trick. Click here to watch."),
+]
+
 LEGIT = [
     mk('"Mom" <mom.smith@aol.com>', "Dinner Sunday?", "Are you coming over Sunday?"),
     mk('"Chase Miller" <chase.miller@gmail.com>', "Game night", "Bring the controller."),
@@ -145,7 +153,7 @@ class ScreenshotSpam(unittest.TestCase):
 
     def test_round2_caught_without_blocklist(self):
         rules = dict(RULES, blocklist_domains=[], blocklist_domain_contains=[])
-        for msg in SCREENSHOT_SPAM_2 + SCREENSHOT_SPAM_3 + SCREENSHOT_SPAM_4 + SCREENSHOT_SPAM_5:
+        for msg in SCREENSHOT_SPAM_2 + SCREENSHOT_SPAM_3 + SCREENSHOT_SPAM_4 + SCREENSHOT_SPAM_5 + SCREENSHOT_SPAM_6:
             v = classify(msg, rules)
             self.assertTrue(v.is_spam(T), f"missed {msg['From']}: {v.score} {v.reasons}")
 
@@ -159,6 +167,12 @@ class Legit(unittest.TestCase):
         for msg in LEGIT:
             v = classify(msg, RULES)
             self.assertFalse(v.is_spam(T), f"false positive {msg['From']}: {v.score} {v.reasons}")
+
+    def test_old_spam_in_inbox_gets_no_familiar_credit(self):
+        wv = mk('"The wvramuse" <chikolasa@goj.wvramuse.com>', "wvramuse", "Two Voices. Take a walk.")
+        rules = dict(RULES, blocklist_domains=[], _familiar_domains={"wvramuse.com"})
+        v = classify(wv, rules)
+        self.assertTrue(v.is_spam(T), f"{v.score} {v.reasons}")
 
     def test_allowlist_wins(self):
         rules = dict(RULES, allowlist_domains=["lendingfuture-compass.org"])

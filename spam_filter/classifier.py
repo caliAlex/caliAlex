@@ -213,8 +213,6 @@ def classify(msg: Message, rules: dict) -> Verdict:
     familiar = rules.get("_familiar_domains")
     if familiar is not None and reg and reg not in familiar:
         v.add(2, "first-time sender domain")
-    elif familiar is not None and reg in familiar:
-        v.add(-2, "sender has emailed you for weeks")
 
     # 3g. Sender name is YOUR own username ("mericali916" <x@atdserve.com>).
     me = rules.get("_self_address", "")
@@ -228,10 +226,10 @@ def classify(msg: Message, rules: dict) -> Verdict:
     labels = domain.split(".")
     subs = labels[:-len(reg.split("."))] if reg else []
     odd_subs = [l for l in subs if l not in _COMMON_SUBDOMAINS]
-    random_sub = any(looks_gibberish(l) or len(l) <= 4 for l in odd_subs)
+    random_sub = any(looks_gibberish(l) or len(l) <= 3 for l in odd_subs)
     if odd_subs and (unrelated or random_sub):
         v.add(3 if random_sub else 2,
-              f"unusual sending host '{odd_subs[0]}.'")
+              f"{'random' if random_sub else 'unusual'} sending host '{odd_subs[0]}.'")
     if reg and not _domain_matches(domain, rules.get("trusted_isp_domains", [])) and (
         looks_gibberish(reg.split(".")[0]) or unpronounceable_start(reg.split(".")[0])
     ):
@@ -329,6 +327,13 @@ def classify(msg: Message, rules: dict) -> Verdict:
         v.add(3, "DMARC failed")
     elif "spf=fail" in auth or "dkim=fail" in auth:
         v.add(2, "SPF/DKIM failed")
+
+    # Senders that have been in your inbox for weeks get a little credit, unless
+    # they also look like spam (spam left sitting in the inbox isn't "familiar").
+    spammy = ("random-looking", "random sending host", "blocklisted", "Junk folder", "pretends to be you",
+              "all-caps", "disguised", "long junk subdomain")
+    if familiar is not None and reg in familiar and not any(k in r for r in v.reasons for k in spammy):
+        v.add(-2, "sender has emailed you for weeks")
 
     # 9. Typical bait wording in subject/body (capped).
     text = re.sub(r"[\s\u00a0\u2000-\u200b\u3000]+", " ", subject + " " + body_text(msg)).lower()
