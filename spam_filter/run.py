@@ -31,7 +31,7 @@ from email.utils import getaddresses, parseaddr
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from spam_filter.classifier import _domain_matches, classify, decode, load_rules, registered_domain  # noqa: E402
+from spam_filter.classifier import _domain_matches, classify, decode, load_rules, parse_sender, registered_domain  # noqa: E402
 
 MAX_FETCH_BYTES = 2_000_000
 JUNK_FALLBACKS = ("Bulk", "Spam", "Junk", "Bulk Mail", "Junk E-mail")
@@ -130,7 +130,11 @@ def learn(imap: imaplib.IMAP4, rules: dict, user: str, junk: str) -> None:
         found = []
         for raw in raw_headers:
             msg = email.message_from_bytes(raw, policy=policy.compat32)
-            for _, a in getaddresses([decode(v) for n in names for v in msg.get_all(n, [])]):
+            values = [v for n in names for v in msg.get_all(n, [])]
+            if names == ("From",):
+                found += [parse_sender(v)[1].lower() for v in values if "@" in parse_sender(v)[1]]
+                continue
+            for _, a in getaddresses([decode(v) for v in values]):
                 if "@" in a:
                     found.append(a.lower())
         return found
@@ -200,7 +204,7 @@ def scan(imap: imaplib.IMAP4, rules: dict, junk: str, days: int, dry: bool, verb
                 spam_uids.append(m.group(1))
                 # Spam sender domains only (never subjects or legit mail), so
                 # the public log shows what was caught without exposing your mail.
-                sender = parseaddr(decode(msg.get("From")))[1]
+                sender = parse_sender(msg.get("From"))[1]
                 print(f"  junk [{verdict.score:>2}] {sender.rpartition('@')[2] or '?'}")
                 if verbose:
                     print(f"[{verdict.score}] {decode(msg.get('From'))} | {decode(msg.get('Subject'))}")
