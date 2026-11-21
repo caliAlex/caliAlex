@@ -121,6 +121,12 @@ SCREENSHOT_SPAM_7 = [
        "<p>A little weird. Pretty cool.</p>"),
 ]
 
+# Round 8.
+SCREENSHOT_SPAM_8 = [
+    mk('"USALOANSTODAY" <otre.avantage.privi@ilegi.newarkusia.com>', "HOW MUCH DO YOU WANT TO BORROW? ckhpd",
+       "A simple and fast online form to submit a request. How Much Do You Want To Borrow? $100 - $1000"),
+]
+
 LEGIT = [
     mk('"Mom" <mom.smith@aol.com>', "Dinner Sunday?", "Are you coming over Sunday?"),
     mk('"Chase Miller" <chase.miller@gmail.com>', "Game night", "Bring the controller."),
@@ -161,7 +167,7 @@ class ScreenshotSpam(unittest.TestCase):
 
     def test_round2_caught_without_blocklist(self):
         rules = dict(RULES, blocklist_domains=[], blocklist_domain_contains=[])
-        for msg in SCREENSHOT_SPAM_2 + SCREENSHOT_SPAM_3 + SCREENSHOT_SPAM_4 + SCREENSHOT_SPAM_5 + SCREENSHOT_SPAM_6 + SCREENSHOT_SPAM_7:
+        for msg in SCREENSHOT_SPAM_2 + SCREENSHOT_SPAM_3 + SCREENSHOT_SPAM_4 + SCREENSHOT_SPAM_5 + SCREENSHOT_SPAM_6 + SCREENSHOT_SPAM_7 + SCREENSHOT_SPAM_8:
             v = classify(msg, rules)
             self.assertTrue(v.is_spam(T), f"missed {msg['From']}: {v.score} {v.reasons}")
 
@@ -180,6 +186,12 @@ class Legit(unittest.TestCase):
         wv = mk('"The wvramuse" <chikolasa@goj.wvramuse.com>', "wvramuse", "Two Voices. Take a walk.")
         rules = dict(RULES, blocklist_domains=[], _familiar_domains={"wvramuse.com"})
         v = classify(wv, rules)
+        self.assertTrue(v.is_spam(T), f"{v.score} {v.reasons}")
+
+    def test_old_spam_domain_in_inbox_still_caught(self):
+        msg = SCREENSHOT_SPAM_8[0]
+        rules = dict(RULES, blocklist_domains=[], _familiar_domains={"newarkusia.com"})
+        v = classify(msg, rules)
         self.assertTrue(v.is_spam(T), f"{v.score} {v.reasons}")
 
     def test_allowlist_wins(self):

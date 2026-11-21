@@ -39,7 +39,8 @@ _COMMON_SUBDOMAINS = set(
     "bounce notifications notification notify alerts alert ealerts updates update service services accounts "
     "account comms communications members member t go click links link msg messages support noreply no-reply "
     "sg mc mta smtp out outbound mx www my mymail txn transactional connect hello offers deals promo promotions "
-    "customer customers care billing secure messaging engage campaign campaigns r rs edm crm".split()
+    "customer customers care billing secure messaging engage campaign campaigns r rs edm crm shop store "
+    "stores online orders order loyalty rewards".split()
 )
 
 
@@ -264,6 +265,15 @@ def classify(msg: Message, rules: dict) -> Verdict:
     if malformed_from:
         v.add(4, "broken/malformed sender line")
 
+    # 3k. Random tag tacked onto the subject to dodge filters ("...BORROW? ckhpd").
+    subj_words = re.findall(r"[A-Za-z]+", decode(msg.get("Subject")))
+    if subj_words and subj_words[-1].islower() and looks_gibberish(subj_words[-1]) and not decode(msg.get("Subject")).rstrip().endswith("."):
+        v.add(3, "random tag at the end of the subject")
+
+    # 3l. SHOUTING one-word sender name that isn't the sending domain ("USALOANSTODAY").
+    if re.fullmatch(r"[A-Z0-9]{8,}", name.strip()) and name.strip().lower() not in domain_flat:
+        v.add(2, "all-caps one-word sender name")
+
     # 3i. Odd sender-name styles.
     if "?" in name:
         v.add(3, "sender name is a question")
@@ -356,13 +366,6 @@ def classify(msg: Message, rules: dict) -> Verdict:
         v.add(3, "DMARC failed")
     elif "spf=fail" in auth or "dkim=fail" in auth:
         v.add(2, "SPF/DKIM failed")
-
-    # Senders that have been in your inbox for weeks get a little credit, unless
-    # they also look like spam (spam left sitting in the inbox isn't "familiar").
-    spammy = ("random-looking", "random sending host", "blocklisted", "Junk folder", "pretends to be you",
-              "all-caps", "disguised", "long junk subdomain")
-    if familiar is not None and reg in familiar and not any(k in r for r in v.reasons for k in spammy):
-        v.add(-2, "sender has emailed you for weeks")
 
     # 9. Typical bait wording in subject/body (capped).
     text = re.sub(r"[\s\u00a0\u2000-\u200b\u3000]+", " ", subject + " " + body_text(msg)).lower()
