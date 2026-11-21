@@ -75,6 +75,31 @@ def normalize_lookalikes(text: str) -> str:
                   if re.search(r"[A-Za-z]", m.group(0)) else m.group(0), text)
 
 
+_ADDR_RE = re.compile(r"[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
+
+
+def parse_sender(raw: str | None) -> tuple[str, str, bool]:
+    """(display name, address, malformed) from a From header, even a broken one.
+
+    Spammers send headers like  "" Insanely _ Cool || Gifts" <MAILLING@x.com>
+    that normal parsers give up on (no address at all), which used to leave
+    almost every rule with nothing to check.
+    """
+    text = decode(raw)
+    name, addr = parseaddr(text)
+    quotes = len(re.findall(r'(?<!\\)"', text))
+    odd_quoting = quotes % 2 == 1 or '""' in text
+    if "@" in addr and " " not in addr and '"' not in addr and "<" not in addr:
+        return name.strip(), addr, odd_quoting
+    found = _ADDR_RE.findall(text)
+    if not found:
+        return name or text.strip(), "", True
+    addr = found[-1]
+    before = text[: text.rfind(addr)]
+    name = re.sub(r'[<>"]+', " ", before).strip()
+    return re.sub(r"\s+", " ", name), addr, True
+
+
 def load_rules(path: Path = RULES_PATH) -> dict:
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
@@ -138,8 +163,8 @@ class Verdict:
 
 def classify(msg: Message, rules: dict) -> Verdict:
     v = Verdict()
-    name, addr = parseaddr(decode(msg.get("From")))
-    addr = addr.lower()
+    name, raw_addr, malformed_from = parse_sender(msg.get("From"))
+    addr = raw_addr.lower()
     local, _, domain = addr.partition("@")
     reg = registered_domain(domain) if domain else ""
     name_l = normalize_lookalikes(name).lower()
@@ -235,6 +260,10 @@ def classify(msg: Message, rules: dict) -> Verdict:
     ):
         v.add(3, "random-looking domain name")
 
+    # 3j. Broken sender line: real mail systems never produce one.
+    if malformed_from:
+        v.add(4, "broken/malformed sender line")
+
     # 3i. Odd sender-name styles.
     if "?" in name:
         v.add(3, "sender name is a question")
@@ -242,7 +271,7 @@ def classify(msg: Message, rules: dict) -> Verdict:
         v.add(2, "trademark symbol in sender name")
     if re.fullmatch(r"[a-z]{14,}", name.strip()):
         v.add(2, "mashed-together lowercase sender name")
-    if re.fullmatch(r"(?:[A-Z][a-z]{3,}){2}", parseaddr(msg.get("From", ""))[1].partition("@")[0]):
+    if re.fullmatch(r"(?:[A-Z][a-z]{3,}){2}", raw_addr.partition("@")[0]):
         v.add(1, "made-up 'WordWord' mailbox name")
     if msg.get("List-Unsubscribe") and unrelated:
         v.add(2, "mass mailing from a sender whose name doesn't match its domain")
@@ -251,7 +280,7 @@ def classify(msg: Message, rules: dict) -> Verdict:
     if _LEET_RE.search(name) or re.search(r"\b[A-Z]{2,}[015][A-Z]*\b", name):
         v.add(4, "digits disguised as letters in display name")
 
-    raw_local_early = parseaddr(msg.get("From", ""))[1].partition("@")[0]
+    raw_local_early = raw_addr.partition("@")[0]
 
     # 4b. Display name tricks: a website name that isn't the sender
     #     ("HealthCare.com Health Insurance." from some other domain).
@@ -277,7 +306,7 @@ def classify(msg: Message, rules: dict) -> Verdict:
         v.add(1, "odd mailbox name")
 
     #     Doubled punctuation used as decoration ("Night__Vision -- Pro Team").
-    if re.search(r"--|__", name):
+    if re.search(r"--|__|\|\||\s_\s", name):
         v.add(1, "doubled punctuation in display name")
 
     #     Generic "Your ..." sender names ("Your Wellness Guide", "Your 4-in-1 Bedroom Boost").
@@ -308,7 +337,7 @@ def classify(msg: Message, rules: dict) -> Verdict:
         v.add(2, "long junk subdomain")
 
     # 6. Odd mailbox names ("TEFORTHISNEWBEGINNINGRIGHTNOW@", "Bottoms+Tops@").
-    raw_local = parseaddr(msg.get("From", ""))[1].partition("@")[0]
+    raw_local = raw_addr.partition("@")[0]
     if len(raw_local) >= 15 and raw_local.isupper():
         v.add(3, "all-caps gibberish mailbox name")
     if re.search(r"[A-Z][a-z]+\+[A-Z][a-z]+", raw_local):
