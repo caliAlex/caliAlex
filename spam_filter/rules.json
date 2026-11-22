@@ -18,7 +18,9 @@
     "wiselivingspace.com",
     "wvramuse.com",
     "nbcemit.org",
-    "borealisraoul.com"
+    "borealisraoul.com",
+    "newarkusia.com",
+    "producttrendon.com"
   ],
   "blocklist_domain_contains": [
     "actionspeakslouderthanwords",
@@ -286,7 +288,20 @@
     "payment was declined",
     "payment declined",
     "take advantage of this offer",
-    "click through"
+    "click through",
+    "want to borrow",
+    "how much do you want",
+    "borrow",
+    "personal loan",
+    "loan offer",
+    "loans today",
+    "submit a request",
+    "fast online form",
+    "cash advance",
+    "payday",
+    "get approved",
+    "same-day funding",
+    "bad credit ok"
   ],
   "trusted_isp_domains": [
     "comcast.net",
