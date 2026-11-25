@@ -4,8 +4,9 @@ on:
   schedule:
     # Each watcher stays on ~5h40m, checking the inbox every 5 minutes, and lines up
     # its own replacement the moment it starts, so there's no gap between them.
-    # This schedule is only a backup that restarts the chain if it ever breaks.
-    - cron: "17 */2 * * *"
+    # This schedule is only a backup that restarts the chain if it ever breaks
+    # (GitHub often skips scheduled runs, so it's requested every hour).
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -37,10 +38,18 @@ jobs:
     steps:
       - name: Line up the next watcher
         # It waits in line (same concurrency group) and starts as soon as this one ends.
+        # GitHub's API sometimes errors (HTTP 500): retry, and never let this stop the mail check.
+        id: lineup
         if: github.event_name == 'schedule' || inputs.stay_on
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run spam-filter.yml --repo "$GITHUB_REPOSITORY" --ref main -f stay_on=true -f dry_run=false
+        run: |
+          for wait in 10 30 60 120 0; do
+            gh workflow run spam-filter.yml --repo "$GITHUB_REPOSITORY" --ref main -f stay_on=true -f dry_run=false && exit 0
+            echo "GitHub refused (often a temporary GitHub error); retrying in ${wait}s"; sleep "$wait"
+          done
+          exit 1
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -62,3 +71,13 @@ jobs:
           CHECK_EVERY: "5"
           PYTHONUNBUFFERED: "1"  # show each check in the log as it happens
         run: python spam_filter/run.py
+      - name: Line up the next watcher (second try)
+        if: always() && steps.lineup.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for wait in 10 30 60 120 0; do
+            gh workflow run spam-filter.yml --repo "$GITHUB_REPOSITORY" --ref main -f stay_on=true -f dry_run=false && exit 0
+            echo "GitHub refused (often a temporary GitHub error); retrying in ${wait}s"; sleep "$wait"
+          done
+          exit 1
